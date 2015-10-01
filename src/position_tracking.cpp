@@ -54,6 +54,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 
 #include <kinect2_bridge/kinect2_definitions.h>
+#include <tf/transform_broadcaster.h>
 
 using namespace std;
 
@@ -309,6 +310,17 @@ private:
     }
   }
 
+  void poseCallback(const visualization_msgs::Marker marker)
+  {
+    static tf::TransformBroadcaster br;
+    tf::Transform transform;
+    transform.setOrigin( tf::Vector3(marker.pose.position.x, marker.pose.position.y, marker.pose.position.z) );
+    tf::Quaternion q;
+    q.setRPY(0.0, 0.0, 0.0);
+    transform.setRotation(q);
+    br.sendTransform(tf::StampedTransform(transform, ros::Time::now(), "kinect2_link", "marker_pos"));
+  }
+
   void callback(const sensor_msgs::Image::ConstPtr imageColor, const sensor_msgs::Image::ConstPtr imageDepth,
                 const sensor_msgs::CameraInfo::ConstPtr cameraInfoColor, const sensor_msgs::CameraInfo::ConstPtr cameraInfoDepth)
   {
@@ -419,7 +431,8 @@ private:
     updateCloud = false;
     lock.unlock();
 
-    createCloud(depth, color, cloud);    
+    createCloud(depth, color, cloud);
+
 
     // visualizer->addPointCloud(cloud, cloudName);
     // visualizer->setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, cloudName);
@@ -451,7 +464,7 @@ private:
         marker.pose.position.z = detected_pos[2];
 
         marker_pub.publish(marker);
-
+        poseCallback(marker); 
 
         // visualizer->updatePointCloud(cloud, cloudName);
       }
@@ -579,18 +592,18 @@ private:
 
   void colorSegmentation(const cv::Mat &color, pcl::PointCloud<pcl::PointXYZRGBA>::Ptr &cloud) const
   {
-    printf("this is for color segmentation \n");
+    // printf("this is for color segmentation \n");
     cv::Mat color_hsv, mask, mask_rgb, hsv_masked;
     cvtColor(color, color_hsv, CV_BGR2HSV);
-    cout << "creating mask ..." << endl;
+    // cout << "creating mask ..." << endl;
     cv::inRange(color_hsv, cv::Scalar(this->color_MIN[0], this->color_MIN[1], this->color_MIN[2]), cv::Scalar(this->color_MAX[0], this->color_MAX[1], this->color_MAX[2]), mask);
-    cout << "doing bitwise and ..." << endl;
+    // cout << "doing bitwise and ..." << endl;
 
     cvtColor(mask,mask_rgb,CV_GRAY2BGR);
     cv::bitwise_and(color, mask_rgb, hsv_masked);
 
-    cv::namedWindow( "hsv masked window", cv::WINDOW_AUTOSIZE);    
-    cv::imshow( "hsv masked window", hsv_masked); 
+    cv::namedWindow( "HSV masked window", cv::WINDOW_AUTOSIZE);    
+    cv::imshow( "HSV masked window", hsv_masked); 
     cv::waitKey(10);
     
     // int counter = 0;
@@ -739,7 +752,7 @@ int main(int argc, char **argv)
 
   ros::init(argc, argv, "detect_position");
   ros::NodeHandle n;
-  marker_pub = n.advertise<visualization_msgs::Marker>("visualization_marker", 10);
+  marker_pub = n.advertise<visualization_msgs::Marker>("Marker_glove", 10);
 
   marker.header.frame_id = "/kinect2_link";
   marker.header.stamp = ros::Time::now();
