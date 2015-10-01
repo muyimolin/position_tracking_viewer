@@ -60,8 +60,9 @@ class MyGLViewer(GLRealtimeProgram):
             pass
         elif not self.inPosition:
             q = robot.right_limb.commandedPosition()
-            q[1] = -0.8
-            q[3] = 1.0
+            q[1] = -0.2
+            q[2] = 1.5
+            q[3] = 1.5
             q[5] = 1.0
             print "Sent setRamp command"
             robot.right_mq.setRamp(q)
@@ -73,7 +74,7 @@ class MyGLViewer(GLRealtimeProgram):
             # robot.left_ee.velocityCommand([0,0,0],[math.sin(t)*0.2,math.cos(t)*0.2,0])
             print "End Effector Command: Velocity"
             ang_vel = [0.0, 0.0, 0.0]
-            pos_vel = [0.0, math.sin(t)*0.5, math.cos(t)*0.5]
+            pos_vel = [0.0, math.sin(t)*0.15, math.cos(t)*0.15]
 
             # velocityCommand sends an instantaneous velocity.
             # The detected velocity is twice as much as the commanded velocity
@@ -85,6 +86,7 @@ class MyGLViewer(GLRealtimeProgram):
 
             # robot.left_ee.driveCommand(ang_vel, pos_vel)
             # robot.left_ee.driveCommand([0.0, 0.0, 0.0], [1, 0, 0])
+
             self.t_current = time.time()
             right_ee_tf = robot.right_ee.commandedTransform()
             self.ee_current = right_ee_tf[1]

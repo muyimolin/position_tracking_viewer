@@ -59,6 +59,7 @@ using namespace std;
 
 double detected_pos[3] = {0.0, 0.0, 0.0};
 
+
 visualization_msgs::Marker marker;
 ros::Publisher marker_pub;
 
@@ -592,13 +593,19 @@ private:
     cv::imshow( "hsv masked window", hsv_masked); 
     cv::waitKey(10);
     
-    int counter = 0;
+    // int counter = 0;
     double centroid_xyz[] = {0.0, 0.0, 0.0};
+    vector< double > detect_pos_arr[3];
+    // vector< double > detect_pos_arr_y;
+    // vector< double > detect_pos_arr_z;
 
     // cout << "type of mask = " << mask.type() <<endl;
 
 
     int mask_pix = 0;
+    double conf = 1.0;
+    double vect_min = 0.0;
+    double vect_max = 0.0;
     for(int r = 0; r < mask.rows; ++r)
     {
       pcl::PointXYZRGBA *itP = &cloud->points[r * mask.cols];
@@ -614,10 +621,15 @@ private:
           }
           else
           {
-            centroid_xyz[0] = centroid_xyz[0] + itP->x;
-            centroid_xyz[1] = centroid_xyz[1] + itP->y;
-            centroid_xyz[2] = centroid_xyz[2] + itP->z;
-            counter = counter + 1.0;
+            // centroid_xyz[0] = centroid_xyz[0] + itP->x;
+            // centroid_xyz[1] = centroid_xyz[1] + itP->y;
+            // centroid_xyz[2] = centroid_xyz[2] + itP->z;
+            // counter = counter + 1.0;
+
+            detect_pos_arr[0].push_back(itP->x);
+            detect_pos_arr[1].push_back(itP->y);
+            detect_pos_arr[2].push_back(itP->z);
+
             // printf("%f, %f, %f \n", itP->x, itP->y, itP->z);
 
           }
@@ -628,9 +640,35 @@ private:
     }
     for(int i = 0; i<3; i++)
     {
+      // centroid_xyz[i] = centroid_xyz[i]/counter;
+      // detected_pos[i] = centroid_xyz[i];
+
+      double sum = std::accumulate(detect_pos_arr[i].begin(), detect_pos_arr[i].end(), 0.0);
+      double mean = sum / detect_pos_arr[i].size();
+
+      double sq_sum = std::inner_product(detect_pos_arr[i].begin(), detect_pos_arr[i].end(), detect_pos_arr[i].begin(), 0.0);
+      double stdev = std::sqrt(sq_sum / detect_pos_arr[i].size() - mean * mean);
+
+      vect_min = mean - conf * stdev;
+      vect_max = mean + conf * stdev;
+      int counter = 0;
+
+      for (vector<double>::iterator it = detect_pos_arr[i].begin() ; it != detect_pos_arr[i].end(); ++it)
+      {
+
+        if(*it >= vect_min && *it <= vect_max)
+        {
+          centroid_xyz[i] = centroid_xyz[i] + *it;
+          counter = counter + 1;
+        }
+      }
+
       centroid_xyz[i] = centroid_xyz[i]/counter;
       detected_pos[i] = centroid_xyz[i];
+
     }
+
+
 
     printf("detected position = [%f, %f, %f] \n", centroid_xyz[0], centroid_xyz[1], centroid_xyz[2]);
 
