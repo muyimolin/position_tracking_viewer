@@ -459,6 +459,8 @@ private:
         colorSegmentation(color, cloud);
         // update markers
         marker.header.stamp = ros::Time::now();
+        // printf("sec = %3.2f", (double) (marker.header.stamp.sec + ((double) marker.header.stamp.nsec * 10e-9)));
+        printf("sec = %d, nsec = %d,  ", marker.header.stamp.sec, marker.header.stamp.nsec);
         marker.pose.position.x = detected_pos[0];
         marker.pose.position.y = detected_pos[1];
         marker.pose.position.z = detected_pos[2];
