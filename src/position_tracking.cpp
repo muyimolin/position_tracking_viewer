@@ -59,6 +59,7 @@
 using namespace std;
 
 double detected_pos[3] = {0.0, 0.0, 0.0};
+string yuv_thresh_file;
 
 
 visualization_msgs::Marker marker;
@@ -174,84 +175,145 @@ private:
 
     spinner.start();
 
-    // initialize for color segmentation variables
-
-    this->sample_path = "/home/motion/ros_ws/src/position_tracking/scripts/sample/sample001.jpg";
+    /// Gettings hsv threshold values from the RGB values in the text file /////
+    double yuv_thresh[] = {0,0,0,0,0,0};
+    istringstream iss(yuv_thresh_file);
+    for (int i = 0; i < 6; i++)
+    {
+     string sub;
+     iss >> sub;
+     yuv_thresh[i] = stod(sub);
+     cout << i << "yuv thresh " << yuv_thresh[i] << endl;
+    } 
     
-    cv::Mat img, hsv_image;
-    img = cv::imread(this->sample_path, CV_LOAD_IMAGE_COLOR);
-    cvtColor(img, hsv_image, CV_BGR2HSV);
+    // test 
+    cv::Mat Th_mat;
+    cv::Mat Tr_mat(1,1,CV_8UC3,cv::Scalar(2,2,0));
+    cv::cvtColor(Tr_mat,Th_mat,CV_BGR2HSV);
+    cv::Vec3b h_vec = Th_mat.at<cv::Vec3b>(0,0);
+    cout << "h min: " << (float)h_vec.val[0] << " s min: " << (float)h_vec.val[1] << " v min: " << (float)h_vec.val[2] << endl;
+
+    cv::Mat Th2_mat;
+    cv::Mat Tr2_mat(1,1,CV_8UC3,cv::Scalar(255,255,255));
+    cv::cvtColor(Tr2_mat,Th2_mat,CV_BGR2HSV);
+    cv::Vec3b h2_vec = Th2_mat.at<cv::Vec3b>(0,0);
+    cout << "h max: " << (float)h2_vec.val[0] << " s max: " << (float)h2_vec.val[1] << " v max: " << (float)h2_vec.val[2] << endl;
+
+    // converting RGB to HSV
+    cv::Mat rgb_mat;
+    cv::Mat hsv_mat;
+    cv::Mat yuv_mat1(1,1,CV_8UC3,cv::Scalar(yuv_thresh[0],yuv_thresh[1],yuv_thresh[2]));
+
+    cvtColor(yuv_mat1, rgb_mat, cv::COLOR_YUV2BGR);
+    cvtColor(rgb_mat,rgb_mat,cv::COLOR_BGR2RGB);
+    cvtColor(rgb_mat, hsv_mat, CV_BGR2HSV);
+    cv::Vec3b hsv_vec1 = hsv_mat.at<cv::Vec3b>(0,0);
+
+    for (int i = 0; i < 3; i++)
+    {
+      color_MIN[i] = (float)hsv_vec1.val[i];
+      cout<< "color_min: "<< i << " = " << color_MIN[i] << endl;
+
+    }
+    
+    cv::Mat yuv_mat2(1,1,CV_8UC3,cv::Scalar(yuv_thresh[3],yuv_thresh[4],yuv_thresh[5]));
+
+    cvtColor(yuv_mat2, rgb_mat, cv::COLOR_YUV2BGR);
+    cvtColor(rgb_mat,rgb_mat,cv::COLOR_BGR2RGB);
+    cvtColor(rgb_mat, hsv_mat, CV_BGR2HSV);
+    cv::Vec3b hsv_vec2 = hsv_mat.at<cv::Vec3b>(0,0);
+
+    for (int i = 0; i < 3; i++)
+    {
+      color_MAX[i] = (float)hsv_vec2.val[i];  
+      cout<< "color_max: "<< i << " = " << color_MAX[i] << endl;
+    }
+
+    // // initialize for color segmentation variables
+    // this->sample_path = "/home/ulkesh/catkin_ws/src/kinect2_position_tracking/scripts/sample/test03.png";
+    
+    // cv::Mat img, hsv_image;
+    // img = cv::imread(this->sample_path, CV_LOAD_IMAGE_COLOR);
+    // cvtColor(img, hsv_image, CV_BGR2HSV);
     // cv::namedWindow( "hsv window", cv::WINDOW_AUTOSIZE);    
     // cv::imshow( "hsv window", hsv_image); 
     // cv::waitKey(10);
 
 
-    int hsv_bin[] = {180, 255, 255};
-    float hsv_range[] = {180, 255, 255};
-    float hsv_threshold[] = {5, 75, 75};
+    // int hsv_bin[] = {180, 255, 255};
+    // float hsv_range[] = {180, 255, 255};
+    // float hsv_threshold[] = {5, 75, 75};   
 
+    // // generating 2D histograph
 
-    // generating 2D histograph
-
-    int hbins = 180, sbins = 255;
-    int histSize[] = {hbins, sbins};
-    int channels[] = {0, 1};
+    // int hbins = 180, sbins = 255;
+    // int histSize[] = {hbins, sbins};
+    // int channels[] = {0, 1};
     
-    float hranges[] = { 0, 180};
-    float sranges[] = { 0, 255};
-    // float vranges[] = { 0, 255};
+    // float hranges[] = { 0, 180};
+    // float sranges[] = { 0, 255};
+    // // float vranges[] = { 0, 255};
 
-    const float* ranges[] = { hranges, sranges};
-    cv::MatND hist2D; 
+    // const float* ranges[] = { hranges, sranges};
+    // cv::MatND hist2D; 
 
-    cv::calcHist( &hsv_image, 1, channels, cv::Mat(), // do not use mask
-             hist2D, 2, histSize, ranges,
-             true, // the histogram is uniform
-             false );
+    // cv::calcHist( &hsv_image, 1, channels, cv::Mat(), // do not use mask
+    //          hist2D, 2, histSize, ranges,
+    //          true, // the histogram is uniform
+    //          false );
 
-    cv::normalize(hist2D, hist2D, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());  // only works for 2D
-    this->hist_2D = hist2D;
+    // cv::normalize(hist2D, hist2D, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());  // only works for 2D
+    // this->hist_2D = hist2D;
 
-    // cout << "type of hist is " << typeid(hist).name() << endl;
+    // // cout << "type of hist is " << typeid(hist).name() << endl;
 
-    // cout << "dims of hist is " << hist.dims << endl;
+    // // cout << "dims of hist is " << hist.dims << endl;
 
-    // generating 1D histograph for each dimension
+    // // generating 1D histograph for each dimension
 
-    double min, max;
-    cv::Point min_loc, max_loc;
+    // double min, max;
+    // cv::Point min_loc, max_loc;
 
-    cv::MatND hist_temp;
-    cv::Mat hist_temp_reduce;
+    // cv::MatND hist_temp;
+    // cv::Mat hist_temp_reduce;
 
-    for(int i = 0; i < 3; i++)
-    {
+    // for(int i = 0; i < 3; i++)
+    // {
       
-      int bin_temp[] = { hsv_bin[i] };
-      int channel_temp[] = {i};
-      float range_temp[] = {0, hsv_range[i]};
-      const float* t_ranges[] = {range_temp};
+    //   int bin_temp[] = { hsv_bin[i] };
+    //   int channel_temp[] = {i};
+    //   float range_temp[] = {0, hsv_range[i]};
+    //   const float* t_ranges[] = {range_temp};
 
 
-      cv::calcHist( &hsv_image, 1, channel_temp, cv::Mat(), // do not use mask
-             hist_temp, 1, bin_temp, t_ranges,
-             true, // the histogram is uniform
-             false);
+    //   cv::calcHist( &hsv_image, 1, channel_temp, cv::Mat(), // do not use mask
+    //          hist_temp, 1, bin_temp, t_ranges,
+    //          true, // the histogram is uniform
+    //          false);
 
-      cv::reduce(hist_temp, hist_temp_reduce, i, CV_REDUCE_SUM);
-      cv::minMaxLoc(hist_temp, &min, &max, &min_loc, &max_loc);
-      cout << "Dim " << i << ": max value: "<< max << ", min value: " << min << ", max_ind: " << max_loc << ", min_ind: " << min_loc << endl;
-      this->color_idx[i] = max_loc.y;
-    }
+    //   cout << "hist_temp size................................" << hist_temp.rows << hist_temp.cols << endl;
 
-    for(int i = 0 ; i<3; i++)
-    {
-      this->color_MAX[i] = this->color_idx[i] + hsv_threshold[i];
-      this->color_MIN[i] = this->color_idx[i] - hsv_threshold[i];
-      cout<< "color_idx["<< i << "] = " << color_idx[i] << endl;
-      cout<< "color_range ["<< i << "] = [" << color_MIN[i] << ", " << color_MAX[i] << "]" << endl;
+    //   ///////////////// imgae of histogram
+    //   //int hist_w = 512; int hist_h = 400;
+    //   //int bin_w = cvRound( (double) hist_w/histSize );
 
-    }
+    //   //Mat histImage( hist_h, hist_w, CV_8UC3, Scalar( 0,0,0) );
+    //   //normalize(hist_temp, hist_temp, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
+
+    //   cv::reduce(hist_temp, hist_temp_reduce, i, CV_REDUCE_SUM);
+    //   cv::minMaxLoc(hist_temp, &min, &max, &min_loc, &max_loc);
+    //   cout << "Dim " << i << ": max value: "<< max << ", min value: " << min << ", max_ind: " << max_loc << ", min_ind: " << min_loc << endl;
+    //   this->color_idx[i] = max_loc.y;
+    // }
+
+    // for(int i = 0 ; i<3; i++)
+    // {
+    //   this->color_MAX[i] = this->color_idx[i] + hsv_threshold[i];
+    //   this->color_MIN[i] = this->color_idx[i] - hsv_threshold[i];
+    //   cout<< "color_idx["<< i << "] = " << color_idx[i] << endl;
+    //   cout<< "color_range ["<< i << "] = [" << color_MIN[i] << ", " << color_MAX[i] << "]" << endl;
+
+    // }
     
 
     std::chrono::milliseconds duration(1);
@@ -283,6 +345,7 @@ private:
       cloudViewer();
       break;
     }
+
   }
 
   void stop()
@@ -598,13 +661,16 @@ private:
     cv::Mat color_hsv, mask, mask_rgb, hsv_masked;
     cvtColor(color, color_hsv, CV_BGR2HSV);
     // cout << "creating mask ..." << endl;
-    cv::inRange(color_hsv, cv::Scalar(this->color_MIN[0], this->color_MIN[1], this->color_MIN[2]), cv::Scalar(this->color_MAX[0], this->color_MAX[1], this->color_MAX[2]), mask);
+    // cv::inRange(color_hsv, cv::Scalar(this->color_MIN[0], this->color_MIN[1], this->color_MIN[2]), cv::Scalar(this->color_MAX[0], this->color_MAX[1], this->color_MAX[2]), mask);
+    cv::inRange(color_hsv, cv::Scalar(20,43,148), cv::Scalar(40,255,255), mask);    
     // cout << "doing bitwise and ..." << endl;
-
+    //cout << "color min: " << color_MIN[0] << " " << color_MIN[1] << " " << color_MIN[2] << endl;
+    //cout << "color max: " << color_MAX[0] << " " << color_MAX[1] << " " << color_MAX[2] << endl;
     cvtColor(mask,mask_rgb,CV_GRAY2BGR);
     cv::bitwise_and(color, mask_rgb, hsv_masked);
 
-    cv::namedWindow( "HSV masked window", cv::WINDOW_AUTOSIZE);    
+    cv::namedWindow( "HSV masked window", cv::WINDOW_AUTOSIZE);  
+    //cv::imshow( "HSV masked window", mask_rgb);   
     cv::imshow( "HSV masked window", hsv_masked); 
     cv::waitKey(10);
     
@@ -781,10 +847,13 @@ int main(int argc, char **argv)
   marker.color.b = 0.0f;
   marker.color.a = 1.0;
 
+  n.getParam("kinect2/yuv_thresh_file",yuv_thresh_file);
+  cout << "param: " << yuv_thresh_file << endl;
+
   marker.lifetime = ros::Duration();
 
 
-  ros::init(argc, argv, "kinect2_viewer", ros::init_options::AnonymousName);
+  ros::init(argc, argv, "kinect2_position_tracking", ros::init_options::AnonymousName);
 
   if(!ros::ok())
   {
