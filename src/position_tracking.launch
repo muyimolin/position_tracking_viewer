@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+
+<launch>
+
+	<node pkg="kinect2_position_tracking" type="detect_position" name="detect_position" 
+	output="screen"/>
+
+	<param name="kinect2/yuv_thresh_file" type="string" 
+	textfile="$(find kinect2_position_tracking)/set_color.txt" />
+
+</launch>
